@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}BMC SCANNER // VULNERABLE IPs{% endblock %}
+
+{% block content %}
+<div class="card card-red">
+    <div class="card-header">
+        <span class="card-title"><i class="fas fa-bug"></i> CONFIRMED VULNERABILITIES</span>
+        <div>
+            <button class="btn btn-small btn-red" onclick="exportData('vulnerable', 'csv')">EXPORT CSV</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>IP ADDRESS</th>
+                        <th>CVE</th>
+                        <th>BMC TYPE</th>
+                        <th>VULNERABILITY</th>
+                        <th>PORT</th>
+                        <th>DISCOVERED</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vuln in results.items %}
+                    <tr style="background: rgba(255, 0, 0, 0.05);">
+                        <td>{{ vuln.id }}</td>
+                        <td style="font-family: 'Orbitron', sans-serif; color: var(--neon-red); font-weight: bold;">{{ vuln.ip_address }}</td>
+                        <td><span style="color: var(--neon-red);">{{ vuln.cve_id }}</span></td>
+                        <td>{{ vuln.bmc_type|upper }}</td>
+                        <td>{{ vuln.vulnerability }}</td>
+                        <td>{{ vuln.port }}</td>
+                        <td>{{ vuln.discovered_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 60px;">
+                            <i class="fas fa-shield-alt" style="font-size: 3rem; margin-bottom: 20px; display: block; color: var(--neon-green);"></i>
+                            > NO VULNERABILITIES CONFIRMED. SYSTEM SECURE.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportData(type, format) {
+    location.href = `/api/export/${type}/${format}`;
+}
+</script>
+{% endblock %}
