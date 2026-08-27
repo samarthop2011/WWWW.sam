@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}BMC SCANNER // SETTINGS{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px;">
+    <div class="card card-cyan">
+        <div class="card-header">
+            <span class="card-title"><i class="fas fa-info-circle"></i> SYSTEM INFO</span>
+        </div>
+        <div class="card-body">
+            <div class="terminal">
+                <div class="terminal-line">> BMC SCANNER v3.0</div>
+                <div class="terminal-line">> PORT: 5000</div>
+                <div class="terminal-line">> DATABASE: data/bmc_scanner.db</div>
+                <div class="terminal-line">> MODE: ZERO-API (PURE SCRAPING)</div>
+                <div class="terminal-line">> THREADS: ENABLED</div>
+                <div class="terminal-line">> STATUS: <span class="blink">OPERATIONAL</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card card-pink">
+        <div class="card-header">
+            <span class="card-title"><i class="fas fa-bug"></i> CVE DATABASE</span>
+        </div>
+        <div class="card-body">
+            {% for bmc_type, data in cves.items() %}
+            <div style="margin-bottom: 15px; padding: 15px; background: rgba(255,0,255,0.05); border-left: 3px solid var(--neon-pink);">
+                <div style="color: var(--neon-pink); font-weight: bold;">{{ data.cve_id }}</div>
+                <div style="font-size: 0.9rem;">{{ data.name }}</div>
+                <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">Ports: {{ data.ports|join(', ') }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card card-yellow" style="margin-top: 30px;">
+    <div class="card-header">
+        <span class="card-title"><i class="fas fa-network-wired"></i> SUBNET CONFIGURATION</span>
+    </div>
+    <div class="card-body">
+        <div class="terminal" style="max-height: 300px; overflow-y: auto;">
+            {% for subnet in subnets %}
+            <div class="terminal-line">> {{ subnet }}</div>
+            {% endfor %}
+        </div>
+        <div style="margin-top: 15px; color: #888;">
+            Total: {{ subnets|length }} subnets configured
+        </div>
+    </div>
+</div>
+{% endblock %}
