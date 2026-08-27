@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}BMC SCANNER // SCAN CONTROL{% endblock %}
+
+{% block extra_css %}
+<style>
+    .scan-panel {
+        background: #000;
+        border: 3px solid var(--neon-cyan);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .scan-status {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .scan-current {
+        font-family: 'Orbitron', sans-serif;
+        color: var(--neon-cyan);
+        font-size: 1.1rem;
+    }
+    
+    .live-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--neon-red);
+        animation: pulse 1s infinite;
+    }
+    
+    .live-dot {
+        width: 10px;
+        height: 10px;
+        background: var(--neon-red);
+        border-radius: 50%;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .stat-box {
+        background: rgba(0, 255, 255, 0.05);
+        border: 1px solid var(--neon-cyan);
+        padding: 15px;
+        text-align: center;
+    }
+    
+    .stat-box-value {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 2rem;
+        color: var(--neon-cyan);
+    }
+    
+    .stat-box-label {
+        font-size: 0.8rem;
+        color: #888;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="scan-panel" id="scan-panel" style="display: none;">
+    <div class="scan-status">
+        <span class="scan-current" id="current-target">> INITIALIZING SCAN...</span>
+        <span class="live-indicator">
+            <span class="live-dot"></span>
+            LIVE SCANNING
+        </span>
+    </div>
+    
+    <div class="progress-container">
+        <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+        <div class="progress-text" id="progress-text">0%</div>
+    </div>
+    
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-box-value" id="stat-total">0</div>
+            <div class="stat-box-label">TOTAL TARGETS</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-box-value" id="stat-scanned">0</div>
+            <div class="stat-box-label">SCANNED</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-box-value" id="stat-found">0</div>
+            <div class="stat-box-label">FOUND</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-box-value" id="stat-vuln">0</div>
+            <div class="stat-box-label">VULNERABLE</div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-green">
+    <div class="card-header">
+        <span class="card-title"><i class="fas fa-play-circle"></i> SCAN CONTROL</span>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label style="display: block; margin-bottom: 10px; color: var(--neon-cyan);">SCAN TYPE</label>
+                <select id="scan-type">
+                    <option value="combined">COMBINED (SUBNET + WEB)</option>
+                    <option value="subnet">SUBNET ONLY</option>
+                    <option value="web">WEB SCRAPING ONLY</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 10px; color: var(--neon-cyan);">TARGET CVE</label>
+                <select id="target-cve">
+                    <option value="all">ALL CVEs</option>
+                    <option value="CVE-2018-1207">CVE-2018-1207 (iDRAC)</option>
+                    <option value="CVE-2024-54085">CVE-2024-54085 (MegaRAC)</option>
+                    <option value="CVE-2024-36435">CVE-2024-36435 (Supermicro)</option>
+                    <option value="CVE-2023-36255">CVE-2023-36255 (ASUS)</option>
+                </select>
+            </div>
+        </div>
+        
+        <button class="btn btn-green" onclick="startScan()" style="width: 100%;">
+            <i class="fas fa-rocket"></i> INITIATE SCAN SEQUENCE
+        </button>
+    </div>
+</div>
+
+<div class="card card-cyan">
+    <div class="card-header">
+        <span class="card-title"><i class="fas fa-list"></i> RECENT DISCOVERIES</span>
+    </div>
+    <div class="card-body">
+        <div class="terminal" id="results-terminal" style="max-height: 400px;">
+            <div class="terminal-line">> WAITING FOR SCAN...</div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="scanModal">
+    <div class="modal">
+        <button class="modal-close" onclick="closeModal()">×</button>
+        <div class="modal-title">> SCAN INITIALIZED</div>
+        <p>Scan is running in background. You can close this dialog.</p>
+        <button class="btn btn-cyan" onclick="closeModal()" style="margin-top: 20px;">ACKNOWLEDGE</button>
+    </div>
+</div>
+
+<script>
+let currentJobId = null;
+let updateInterval = null;
+
+function openModal() {
+    document.getElementById('scanModal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('scanModal').classList.remove('active');
+}
+
+function startScan() {
+    const scanType = document.getElementById('scan-type').value;
+    const targetCve = document.getElementById('target-cve').value;
+    
+    fetch('/api/start-scan', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            scan_type: scanType,
+            target_cve: targetCve
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            currentJobId = data.job_id;
+            document.getElementById('scan-panel').style.display = 'block';
+            openModal();
+            startRealtimeUpdates();
+        }
+    });
+}
+
+function startRealtimeUpdates() {
+    if(updateInterval) clearInterval(updateInterval);
+    updateInterval = setInterval(() => {
+        updateScanStatus();
+        updateResults();
+    }, 2000);
+}
+
+function updateScanStatus() {
+    fetch('/api/active-jobs')
+    .then(r => r.json())
+    .then(jobs => {
+        if(jobs.length > 0) {
+            const job = jobs[0];
+            document.getElementById('progress-bar').style.width = job.progress + '%';
+            document.getElementById('progress-text').textContent = Math.round(job.progress) + '%';
+            document.getElementById('current-target').textContent = '> ' + (job.current || 'SCANNING...');
+            document.getElementById('stat-total').textContent = job.total || 0;
+            document.getElementById('stat-scanned').textContent = job.scanned || 0;
+            document.getElementById('stat-found').textContent = job.found || 0;
+            document.getElementById('stat-vuln').textContent = job.vulnerable || 0;
+        } else {
+            document.getElementById('scan-panel').style.display = 'none';
+            clearInterval(updateInterval);
+        }
+    });
+}
+
+function updateResults() {
+    fetch('/api/recent-found')
+    .then(r => r.json())
+    .then(data => {
+        const terminal = document.getElementById('results-terminal');
+        if(data.length > 0) {
+            terminal.innerHTML = data.map(r => 
+                `<div class="terminal-line">[${r.time}] ${r.type.toUpperCase()} // ${r.ip}:${r.port} // ${r.status.toUpperCase()}</div>`
+            ).join('');
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+    });
+}
+
+// Close modal on outside click
+document.getElementById('scanModal').addEventListener('click', function(e) {
+    if(e.target === this) closeModal();
+});
+</script>
+{% endblock %}
