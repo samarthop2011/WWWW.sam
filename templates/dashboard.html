@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}BMC SCANNER // DASHBOARD{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card card-green">
+        <div class="stat-value">{{ stats.total_found }}</div>
+        <div class="stat-label">Total Found</div>
+    </div>
+    <div class="stat-card card-red">
+        <div class="stat-value">{{ stats.total_vulnerable }}</div>
+        <div class="stat-label">Vulnerable</div>
+    </div>
+    <div class="stat-card card-cyan">
+        <div class="stat-value">{{ stats.running_jobs }}</div>
+        <div class="stat-label">Active Scans</div>
+    </div>
+    <div class="stat-card card-pink">
+        <div class="stat-value">{{ stats.completed_jobs }}</div>
+        <div class="stat-label">Completed</div>
+    </div>
+</div>
+
+<div class="cve-grid">
+    {% for bmc_type, data in cves.items() %}
+    <div class="cve-card card-{{ 'green' if bmc_type == 'idrac' else 'yellow' if bmc_type == 'megarac' else 'pink' if bmc_type == 'supermicro' else 'cyan' }}">
+        <div class="cve-id">{{ data.cve_id }}</div>
+        <div class="cve-name">{{ data.name }}</div>
+        <div style="font-size: 0.9rem; opacity: 0.8;">{{ data.description }}</div>
+        <div class="cve-ports">
+            <i class="fas fa-network-wired"></i> Ports: {{ data.ports|join(', ') }}
+        </div>
+        <div style="margin-top: 15px;">
+            <span class="badge badge-found">
+                {{ stats.idrac_count if bmc_type == 'idrac' else stats.megarac_count if bmc_type == 'megarac' else stats.supermicro_count if bmc_type == 'supermicro' else stats.asus_count }} Found
+            </span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card card-green">
+    <div class="card-header">
+        <span class="card-title"><i class="fas fa-rocket"></i> Quick Launch</span>
+    </div>
+    <div class="card-body">
+        <button class="btn btn-green" onclick="startQuickScan()">
+            <i class="fas fa-play"></i> START FULL SCAN
+        </button>
+        <button class="btn btn-cyan" onclick="location.href='/scanner'" style="margin-left: 15px;">
+            <i class="fas fa-sliders-h"></i> ADVANCED OPTIONS
+        </button>
+        <button class="btn btn-red" onclick="clearAll()" style="margin-left: 15px;">
+            <i class="fas fa-trash"></i> PURGE DATABASE
+        </button>
+    </div>
+</div>
+
+<div class="card card-cyan">
+    <div class="card-header">
+        <span class="card-title"><i class="fas fa-terminal"></i> System Status</span>
+    </div>
+    <div class="card-body">
+        <div class="terminal" id="status-terminal">
+            <div class="terminal-line">> BMC SCANNER v3.0 INITIALIZED...</div>
+            <div class="terminal-line">> DATABASE: CONNECTED</div>
+            <div class="terminal-line">> PORT: 5000 // LISTENING</div>
+            <div class="terminal-line">> CVE DATABASE: LOADED (4 ENTRIES)</div>
+            <div class="terminal-line">> SUBNET LIST: {{ subnets|length }} NETWORKS</div>
+            <div class="terminal-line">> STATUS: <span class="blink">READY</span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function startQuickScan() {
+    fetch('/api/start-scan', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({scan_type: 'combined', target_cve: 'all'})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            alert('SCAN INITIATED // JOB ID: ' + data.job_id);
+            location.href = '/scanner';
+        }
+    });
+}
+
+function clearAll() {
+    if(!confirm('⚠️ PURGE ALL DATA? THIS CANNOT BE UNDONE!')) return;
+    fetch('/api/clear-all', {method: 'POST'})
+    .then(() => location.reload());
+}
+</script>
+{% endblock %}
