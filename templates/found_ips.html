@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}BMC SCANNER // FOUND IPs{% endblock %}
+
+{% block content %}
+<div class="card card-green">
+    <div class="card-header">
+        <span class="card-title"><i class="fas fa-broadcast-tower"></i> DISCOVERED IPs</span>
+        <div>
+            <button class="btn btn-small btn-green" onclick="exportData('found', 'csv')">EXPORT CSV</button>
+            <button class="btn btn-small btn-cyan" onclick="exportData('found', 'json')">JSON</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>IP ADDRESS</th>
+                        <th>PORT</th>
+                        <th>BMC TYPE</th>
+                        <th>STATUS</th>
+                        <th>SOURCE</th>
+                        <th>OPEN PORTS</th>
+                        <th>DISCOVERED</th>
+                        <th>ACTION</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ip in results.items %}
+                    <tr>
+                        <td>{{ ip.id }}</td>
+                        <td style="font-family: 'Orbitron', sans-serif; color: var(--neon-cyan);">{{ ip.ip_address }}</td>
+                        <td>{{ ip.port }}</td>
+                        <td>{{ ip.bmc_type|upper }}</td>
+                        <td>
+                            <span class="badge badge-{{ ip.status }}">{{ ip.status }}</span>
+                        </td>
+                        <td>{{ ip.source_type }}</td>
+                        <td>{{ ip.open_ports or 'N/A' }}</td>
+                        <td>{{ ip.discovered_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <button class="btn btn-small btn-red" onclick="deleteIP({{ ip.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 60px;">
+                            <i class="fas fa-satellite" style="font-size: 3rem; margin-bottom: 20px; display: block;"></i>
+                            > NO TARGETS DISCOVERED. INITIATE SCAN SEQUENCE.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteIP(id) {
+    if(!confirm('DELETE TARGET #' + id + '?')) return;
+    fetch(`/api/delete-found/${id}`, {method: 'DELETE'})
+    .then(() => location.reload());
+}
+
+function exportData(type, format) {
+    location.href = `/api/export/${type}/${format}`;
+}
+</script>
+{% endblock %}
